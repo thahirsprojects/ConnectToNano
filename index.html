@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101827">
+<title>Nano Companion — Bluetooth Tester</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1120;--panel:#131d30;--panel2:#19263d;--line:#2b3a55;--text:#f3f6ff;--muted:#a6b3ca;--accent:#a7f3d0;--accent2:#60a5fa;--danger:#fca5a5}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#182944 0%,var(--bg) 55%);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+main{max-width:880px;margin:auto;padding:28px 16px 48px}.hero{display:flex;align-items:center;gap:14px;margin-bottom:22px}.logo{width:54px;height:54px;border-radius:17px;background:var(--accent);color:#10221d;display:grid;place-items:center;font-size:28px;font-weight:900;box-shadow:0 8px 30px #a7f3d022}
+h1{font-size:clamp(25px,5vw,36px);line-height:1.1;margin:0 0 5px}.sub{color:var(--muted);margin:0}.statusbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#111b2d;border:1px solid var(--line);border-radius:15px;padding:13px 15px;margin-bottom:18px}.dot{width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block}.dot.on{background:#34d399;box-shadow:0 0 12px #34d39966}.status{font-weight:700}.device{color:var(--muted);font-size:14px;margin-left:auto}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.card{background:linear-gradient(145deg,#172238,#111a2b);border:1px solid var(--line);border-radius:18px;padding:18px;min-width:0}.wide{grid-column:1/-1}h2{font-size:18px;margin:0 0 4px}.hint{color:var(--muted);font-size:13px;margin:0 0 14px}
+label{display:block;font-size:13px;color:#c7d2e6;margin:11px 0 6px}input,select{width:100%;border:1px solid #34445f;background:#0d1627;color:var(--text);border-radius:10px;padding:11px 12px;font:inherit;min-width:0}input:focus,select:focus{outline:2px solid #60a5fa66;border-color:var(--accent2)}
+button{border:0;border-radius:11px;padding:11px 14px;font:700 14px system-ui;cursor:pointer;background:var(--accent);color:#10221c;transition:transform .12s,opacity .12s}button:hover{transform:translateY(-1px)}button:disabled{opacity:.4;cursor:not-allowed;transform:none}.secondary{background:#253550;color:var(--text);border:1px solid #3b4c69}.danger{background:#48242e;color:#fecaca;border:1px solid #783b49}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.actions button{flex:1}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.note{margin-top:18px;padding:14px 16px;border:1px solid #314766;background:#101b2d;border-radius:14px;color:var(--muted);font-size:13px}.note strong{color:var(--text)}#log{white-space:pre-wrap;overflow-wrap:anywhere;background:#080e19;border:1px solid var(--line);padding:12px;border-radius:11px;min-height:72px;max-height:180px;overflow:auto;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;color:#c8d7ef}.footer{text-align:center;color:#8292ac;font-size:12px;margin-top:20px}
+@media(max-width:620px){main{padding:20px 12px 36px}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.device{margin-left:0;width:100%}.card{padding:16px}.two{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div class="logo">N</div>
+    <div><h1>Nano Companion</h1><p class="sub">Bluetooth test panel for your ESP32 OLED buddy</p></div>
+  </header>
+
+  <section class="statusbar" aria-live="polite">
+    <span class="dot" id="dot"></span>
+    <span class="status" id="status">Not connected</span>
+    <span class="device" id="deviceName">Open this page in Chrome on Android</span>
+    <button id="connectBtn" type="button">Connect to Nano</button>
+    <button id="disconnectBtn" type="button" class="secondary" disabled>Disconnect</button>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Quick tests</h2><p class="hint">Send a test command to the OLED.</p>
+      <div class="actions"><button id="waterBtn" disabled>💧 Test water screen</button></div>
+      <div class="actions"><button id="clockBtn" disabled>🕒 Set time now</button></div>
+      <label for="appName">App name</label><input id="appName" maxlength="24" value="WhatsApp" placeholder="e.g. WhatsApp">
+      <label for="message">Notification message</label><input id="message" maxlength="110" value="Hello from Nano test page!" placeholder="Type a test message">
+      <div class="actions"><button id="notifyBtn" disabled>🔔 Send test notification</button></div>
+    </section>
+
+    <section class="card">
+      <h2>Nano settings</h2><p class="hint">Settings are saved on Nano's flash memory.</p>
+      <label for="buddyName">Nano's name (max 8 characters)</label><input id="buddyName" maxlength="8" value="Nano">
+      <div class="two">
+        <div><label for="activeStart">Active from</label><input id="activeStart" type="time" value="09:00" required></div>
+        <div><label for="activeEnd">Active until</label><input id="activeEnd" type="time" value="17:30" required></div>
+      </div>
+      <label for="waterMinutes">Water reminder interval (minutes)</label><input id="waterMinutes" type="number" min="1" max="240" value="20">
+      <div class="actions"><button id="saveBtn" disabled>Save settings</button></div>
+    </section>
+
+    <section class="card wide">
+      <h2>Connection log</h2><p class="hint">Helpful for checking whether commands were sent.</p>
+      <div id="log" aria-live="polite">Ready. Connect to Nano to begin.</div>
+      <div class="actions"><button id="clearLogBtn" class="secondary">Clear log</button></div>
+    </section>
+  </div>
+
+  <aside class="note">
+    <strong>Before using:</strong> Open this page in Chrome on Android, enable Bluetooth, and keep Nano powered on nearby. Web Bluetooth requires HTTPS (or localhost). This page sends commands to Nano; it does not automatically forward normal phone notifications. For that, a dedicated Android app will be needed.
+  </aside>
+  <p class="footer">Nano BLE tester · Service and characteristic UUIDs match the supplied ESP32 sketch</p>
+</main>
+<script>
+(() => {
+  const SERVICE_UUID = '7a1c0001-5e0d-4b8e-9f3a-2d6c1b4a0001';
+  const CHAR_UUID = '7a1c0002-5e0d-4b8e-9f3a-2d6c1b4a0001';
+  const $ = id => document.getElementById(id);
+  let device = null, server = null, characteristic = null;
+  const encoder = new TextEncoder();
+
+  function log(message) {
+    const stamp = new Date().toLocaleTimeString();
+    const el = $('log');
+    el.textContent = `[${stamp}] ${message}\n` + el.textContent;
+  }
+  function setConnected(connected) {
+    $('dot').classList.toggle('on', connected);
+    $('status').textContent = connected ? 'Connected to Nano' : 'Not connected';
+    $('deviceName').textContent = connected ? (device?.name || 'Nano') : 'Open this page in Chrome on Android';
+    $('connectBtn').disabled = connected;
+    $('disconnectBtn').disabled = !connected;
+    ['waterBtn','clockBtn','notifyBtn','saveBtn'].forEach(id => $(id).disabled = !connected);
+  }
+  function onDisconnected() {
+    characteristic = null; server = null;
+    setConnected(false);
+    log('Nano disconnected. Tap Connect to Nano to reconnect.');
+  }
+  async function connect() {
+    if (!navigator.bluetooth) {
+      alert('Web Bluetooth is not available here. Open this page in Chrome on Android over HTTPS.');
+      return;
+    }
+    try {
+      $('connectBtn').disabled = true;
+      log('Searching for Nano…');
+      device = await navigator.bluetooth.requestDevice({
+        filters: [{ name: 'Nano' }],
+        optionalServices: [SERVICE_UUID]
+      });
+      device.addEventListener('gattserverdisconnected', onDisconnected);
+      server = await device.gatt.connect();
+      const service = await server.getPrimaryService(SERVICE_UUID);
+      characteristic = await service.getCharacteristic(CHAR_UUID);
+      setConnected(true);
+      log(`Connected to ${device.name || 'Nano'}; command channel ready.`);
+    } catch (err) {
+      setConnected(false);
+      log(`Connection failed: ${err.message || err}`);
+      if (err.name !== 'NotFoundError') alert(`Could not connect to Nano: ${err.message || err}`);
+    } finally {
+      if (!characteristic) $('connectBtn').disabled = false;
+    }
+  }
+  async function send(command, description) {
+    if (!characteristic) { alert('Connect to Nano first.'); return; }
+    try {
+      const bytes = encoder.encode(command);
+      if (characteristic.properties.write) await characteristic.writeValueWithResponse(bytes);
+      else if (characteristic.properties.writeWithoutResponse) await characteristic.writeValueWithoutResponse(bytes);
+      else throw new Error('The Nano characteristic does not support writing.');
+      log(`${description}: sent ${JSON.stringify(command)}`);
+    } catch (err) {
+      log(`Send failed: ${err.message || err}`);
+      alert(`Could not send command: ${err.message || err}`);
+    }
+  }
+  function validTime(value) { return /^\d{2}:\d{2}$/.test(value); }
+
+  $('connectBtn').addEventListener('click', connect);
+  $('disconnectBtn').addEventListener('click', () => {
+    if (device?.gatt?.connected) device.gatt.disconnect();
+    else onDisconnected();
+  });
+  $('waterBtn').addEventListener('click', () => send('W', 'Water screen test'));
+  $('clockBtn').addEventListener('click', () => {
+    const epoch = Math.floor(Date.now() / 1000);
+    const tzSeconds = -new Date().getTimezoneOffset() * 60;
+    send(`T|${epoch}|${tzSeconds}`, 'Clock synchronized');
+  });
+  $('notifyBtn').addEventListener('click', () => {
+    const app = $('appName').value.trim() || 'Test';
+    const message = $('message').value.trim() || 'Hello from Nano';
+    send(`N|${app}|${message}`.slice(0, 140), 'Test notification');
+  });
+  $('saveBtn').addEventListener('click', () => {
+    const name = $('buddyName').value.trim() || 'Nano';
+    const start = $('activeStart').value;
+    const end = $('activeEnd').value;
+    const minutes = Number($('waterMinutes').value);
+    if (!validTime(start) || !validTime(end)) return alert('Choose valid start and end times.');
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 240) return alert('Water interval must be between 1 and 240 minutes.');
+    send(`S|${name.slice(0,8)}|${start}|${end}|${minutes}`, 'Settings saved');
+  });
+  $('clearLogBtn').addEventListener('click', () => $('log').textContent = 'Log cleared.');
+  if (!window.isSecureContext) log('Warning: this page is not in a secure context. Host it on HTTPS or use localhost.');
+  if (!navigator.bluetooth) log('Web Bluetooth unavailable in this browser. Use Chrome on Android.');
+})();
+</script>
+</body>
+</html>
